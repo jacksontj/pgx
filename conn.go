@@ -1285,9 +1285,9 @@ func (c *Conn) WaitForNotification(ctx context.Context) (notification *Notificat
 
 func (c *Conn) IsAlive() bool {
 	c.mux.RLock()
-	ret := c.status >= connStatusIdle
+	ret := c.status
 	c.mux.RUnlock()
-	return ret
+	return ret >= connStatusIdle
 }
 
 func (c *Conn) CauseOfDeath() error {
