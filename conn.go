@@ -128,7 +128,7 @@ type Conn struct {
 	preallocatedRows   []Rows
 	onNotice           NoticeHandler
 
-	mux          sync.Mutex
+	mux          sync.RWMutex
 	status       byte // One of connStatus* constants
 	causeOfDeath error
 
@@ -1284,15 +1284,15 @@ func (c *Conn) WaitForNotification(ctx context.Context) (notification *Notificat
 }
 
 func (c *Conn) IsAlive() bool {
-	c.mux.Lock()
+	c.mux.RLock()
 	ret := c.status >= connStatusIdle
-	c.mux.Unlock()
+	c.mux.RUnlock()
 	return ret
 }
 
 func (c *Conn) CauseOfDeath() error {
-	c.mux.Lock()
-	defer c.mux.Unlock()
+	c.mux.RLock()
+	defer c.mux.RUnlock()
 	return c.causeOfDeath
 }
 
