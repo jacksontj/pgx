@@ -1287,8 +1287,9 @@ func (c *Conn) WaitForNotification(ctx context.Context) (notification *Notificat
 
 func (c *Conn) IsAlive() bool {
 	c.mux.Lock()
-	defer c.mux.Unlock()
-	return c.status >= connStatusIdle
+	ret := c.status >= connStatusIdle
+	c.mux.Unlock()
+	return ret
 }
 
 func (c *Conn) CauseOfDeath() error {
@@ -1593,25 +1594,27 @@ func (c *Conn) die(err error) {
 
 func (c *Conn) lock() error {
 	c.mux.Lock()
-	defer c.mux.Unlock()
 
 	if c.status != connStatusIdle {
+		c.mux.Unlock()
 		return ErrConnBusy
 	}
 
 	c.status = connStatusBusy
+	c.mux.Unlock()
 	return nil
 }
 
 func (c *Conn) unlock() error {
 	c.mux.Lock()
-	defer c.mux.Unlock()
 
 	if c.status != connStatusBusy {
+		c.mux.Unlock()
 		return errors.New("unlock conn that is not busy")
 	}
 
 	c.status = connStatusIdle
+	c.mux.Unlock()
 	return nil
 }
 
