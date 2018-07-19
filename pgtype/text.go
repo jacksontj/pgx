@@ -3,6 +3,8 @@ package pgtype
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"reflect"
+	"unsafe"
 
 	"github.com/pkg/errors"
 )
@@ -31,7 +33,7 @@ func (dst *Text) Set(src interface{}) error {
 		if value == nil {
 			*dst = Text{Status: Null}
 		} else {
-			*dst = Text{String: string(value), Status: Present}
+			*dst = Text{String: BytesToString(value), Status: Present}
 		}
 	default:
 		if originalSrc, ok := underlyingStringType(src); ok {
@@ -77,13 +79,20 @@ func (src *Text) AssignTo(dst interface{}) error {
 	return errors.Errorf("cannot decode %#v into %T", src, dst)
 }
 
+// TODO: move elsewhere?
+func BytesToString(b []byte) string {
+	bh := (*reflect.SliceHeader)(unsafe.Pointer(&b))
+	sh := reflect.StringHeader{bh.Data, bh.Len}
+	return *(*string)(unsafe.Pointer(&sh))
+}
+
 func (dst *Text) DecodeText(ci *ConnInfo, src []byte) error {
 	if src == nil {
 		*dst = Text{Status: Null}
 		return nil
 	}
 
-	*dst = Text{String: string(src), Status: Present}
+	*dst = Text{String: BytesToString(src), Status: Present}
 	return nil
 }
 
