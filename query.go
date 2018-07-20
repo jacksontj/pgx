@@ -56,6 +56,8 @@ type Rows struct {
 	args       []interface{}
 	unlockConn bool
 	closed     bool
+
+	autoRow []interface{}
 }
 
 func (rows *Rows) FieldDescriptions() []FieldDescription {
@@ -269,6 +271,31 @@ func (rows *Rows) Scan(dest ...interface{}) (err error) {
 	}
 
 	return nil
+}
+
+// AutoValues simply spins over the types, creates the pgtype variables, then fills
+// them with the appropriate data. The values returned will be overwritten on the next
+// call to AutoValues()
+func (rows *Rows) AutoValues() ([]interface{}, error) {
+	if rows.closed {
+		return nil, errors.New("rows is closed")
+	}
+
+	if rows.autoRow == nil {
+		rows.autoRow = make([]interface{}, len(rows.fields))
+		for i, f := range rows.fields {
+			c, ok := pgtype.NameValueCreators[f.DataTypeName]
+			if !ok {
+				return nil, fmt.Errorf("Unknown type %s", f.DataTypeName)
+			}
+			rows.autoRow[i] = c()
+		}
+	}
+
+	if err := rows.Scan(rows.autoRow...); err != nil {
+		return nil, err
+	}
+	return rows.autoRow, nil
 }
 
 // Values returns an array of the row values
